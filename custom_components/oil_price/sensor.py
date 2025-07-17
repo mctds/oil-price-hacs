@@ -110,15 +110,16 @@ class OilPriceHintSensor(Entity):
         """Parse HTML content and extract hint information."""
         soup = BeautifulSoup(text, "lxml")
         try:
-            hint_section = soup.select_one("#youjiaCont > div:nth-of-type(2)")
-            if hint_section:
-                text = hint_section.text.strip()
-                left_part, price_part = text.split('(', 1)
-                time_part, oil_part = left_part.split(maxsplit=1)
-                match = re.findall(r'[$|(](.*?)[$|)]', text)
-                info = time_part + '\n预计上涨:' + match[0]
-                self._state = info
-                self._update_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            hint_div = soup.select_one("#youjiaCont > div:nth-of-type(2)")
+            if hint_div:
+                adjustment_time = hint_div.contents[0].strip()
+            
+                red_span = hint_div.select_one("span[style*='color:#F00']")
+                if red_span:
+                    red_text = red_span.get_text(strip=True)
+                    clean_text = re.sub(r'，大家相互转告油价[^。]*。?$', '', red_text)
+                    self._state = f"{adjustment_time}，{clean_text}。"
+                    self._update_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         except Exception as e:
             _LOGGER.error(f"Error parsing hint data: {e}")
 
